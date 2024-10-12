@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transaction Dashboard</title>
+    <!-- Bootstrap CSS for table styling -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #e7f2f8;
+            font-family: Arial, sans-serif;
+            padding: 40px;
+        }
+
+        /* Center header */
+        h1 {
+            background-color: white;
+            /* White background */
+            border-radius: 50%;
+            /* Make it circular */
+            display: inline-block;
+            /* Allows the circular effect */
+            padding: 20px;
+            /* Adjust the padding as needed */
+            text-align: center;
+            /* Center the text */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            /* Optional shadow */
+        }
+
+        /* Styling for search and filter buttons */
+        .filters {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filters select {
+            padding: 10px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            background-color: #fdd85d;
+            color: #000;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        /* Button style for search transaction */
+        .search-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            background-color: #fdd85d;
+            color: #000;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            background-color: #fdd85d;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 15px;
+            text-align: left;
+            border: 2px solid #000;
+        }
+
+        th {
+            font-size: 1.1rem;
+        }
+
+        /* Pagination controls */
+        .pagination-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .pagination-controls div {
+            font-size: 1rem;
+        }
+
+        .pagination-controls button {
+            background-color: #fdd85d;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 25px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        .pagination-controls button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <center>
+        <h1>Transaction Dashboard</h1>
+    </center>
+
+    <!-- Search and Filter Controls -->
+    <div class="filters">
+        <!-- Month Dropdown -->
+        <select id="month-filter">
+            <option value="">Select Month</option>
+            <!-- Options will be populated dynamically -->
+        </select>
+    
+        <!-- Search Bar -->
+        <input type="text" id="search-box" placeholder="Search by title, description, or price" class="form-control" style="width: 300px; display: inline-block;">
+    
+    </div>
+    
+
+    <!-- Table to display the fetched data -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Category</th>
+                <th>Sold</th>
+                <th>Image</th>
+            </tr>
+        </thead>
+        <tbody id="data-table-body">
+            <!-- Data will be inserted here dynamically by JavaScript -->
+        </tbody>
+    </table>
+
+    <!-- Pagination Controls -->
+    <div class="pagination-controls">
+        <div class="page-info">Page No: <span id="current-page">1</span></div>
+        <div>
+            <button id="prev-page" disabled>Previous</button>
+            <button id="next-page">Next</button>
+        </div>
+        <div>
+            Per Page: <span id="items-per-page">10</span>
+        </div>
+    </div>
+
+    <!-- Script to fetch JSON data, search, and filter by month -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    const jsonUrl = './data.json';  // Path to your local JSON file
+    let data = [];
+    let filteredData = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
+    const tableBody = document.getElementById('data-table-body');
+    const monthFilter = document.getElementById('month-filter');
+    const prevPageBtn = document.getElementById('prev-page');
+    const nextPageBtn = document.getElementById('next-page');
+    const currentPageDisplay = document.getElementById('current-page');
+    const searchBox = document.getElementById('search-box');
+
+    // Fetch data from local JSON
+    fetch(jsonUrl)
+        .then(response => response.json())
+        .then(jsonData => {
+            data = jsonData;
+            filteredData = jsonData;
+            populateTable();
+            populateMonthFilter(data);
+        })
+        .catch(error => console.error('Error fetching local JSON data:', error));
+
+    // Function to populate the table
+    function populateTable() {
+        tableBody.innerHTML = ''; // Clear the table
+        const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+        paginatedData.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.id}</td>
+                <td>${item.title}</td>
+                <td>${item.description}</td>
+                <td>${item.price}</td>
+                <td>${item.category}</td>
+                <td>${item.sold ? 'Yes' : 'No'}</td>
+                <td><img src="${item.image}" alt="${item.title}" width="50"></td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        updatePaginationControls();
+    }
+
+    // Function to update pagination controls
+    function updatePaginationControls() {
+        currentPageDisplay.textContent = currentPage;
+        prevPageBtn.disabled = currentPage === 1;
+        nextPageBtn.disabled = currentPage * itemsPerPage >= filteredData.length;
+    }
+
+    // Pagination event listeners
+    prevPageBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            populateTable();
+        }
+    });
+
+    nextPageBtn.addEventListener('click', () => {
+        if (currentPage * itemsPerPage < filteredData.length) {
+            currentPage++;
+            populateTable();
+        }
+    });
+
+    // Function to populate month filter options
+    function populateMonthFilter(data) {
+        const months = new Set();
+        data.forEach(item => {
+            const date = new Date(item.dateOfSale);
+            const monthYear = `${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+            months.add(monthYear);
+        });
+
+        Array.from(months).sort().forEach(month => {
+            const option = document.createElement('option');
+            option.value = month;
+            option.textContent = month;
+            monthFilter.appendChild(option);
+        });
+    }
+
+    // Function to filter data by search and month
+    function filterData() {
+        const searchTerm = searchBox.value.toLowerCase();
+        const selectedMonth = monthFilter.value;
+
+        // Filter based on the search term (title, description, or price)
+        filteredData = data.filter(item => {
+            const matchesSearch = item.title.toLowerCase().includes(searchTerm) ||
+                                  item.description.toLowerCase().includes(searchTerm) ||
+                                  item.price.toString().includes(searchTerm);
+
+            const date = new Date(item.dateOfSale);
+            const itemMonthYear = `${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+            const matchesMonth = selectedMonth ? itemMonthYear === selectedMonth : true;
+
+            return matchesSearch && matchesMonth;
+        });
+
+        currentPage = 1; // Reset to first page
+        populateTable();
+    }
+
+    // Event listener for search box and month filter
+    searchBox.addEventListener('input', filterData);
+    monthFilter.addEventListener('change', filterData);
+});
+
+    //     document.addEventListener('DOMContentLoaded', () => {
+    //         //const jsonUrl = 'https://s3.amazonaws.com/roxiler.com/product_transaction.json';
+
+    //         const jsonUrl = './data.json'; // Path to your local JSON file
+    //         //const jsonUrl = 'https://s3.amazonaws.com/roxiler.com/product_transaction.json';
+
+    //         // fetch(jsonUrl)
+    //         //     .then(response => {
+    //         //         if (!response.ok) {
+    //         //             throw new Error('Network response was not ok');
+    //         //         }
+    //         //         return response.json();
+    //         //     })
+    //         //     .then(jsonData => {
+    //         //         // Process jsonData
+    //         //     })
+    //         //     .catch(error => console.error('Error fetching data:', error));
+
+    //         let data = [];
+    //         let filteredData = [];
+    //         let currentPage = 1;
+    //         const itemsPerPage = 10;
+
+    //         const tableBody = document.getElementById('data-table-body');
+    //         const monthFilter = document.getElementById('month-filter');
+    //         const prevPageBtn = document.getElementById('prev-page');
+    //         const nextPageBtn = document.getElementById('next-page');
+    //         const currentPageDisplay = document.getElementById('current-page');
+    //         const searchBtn = document.getElementById('search-btn');
+
+    //         // Fetch data from local JSON
+    //         fetch(jsonUrl)
+    //             .then(response => response.json())
+    //             .then(jsonData => {
+    //                 data = jsonData;
+    //                 filteredData = jsonData;
+    //                 populateTable();
+    //                 populateMonthFilter(data);
+    //             })
+    //             .catch(error => console.error('Error fetching local JSON data:', error));
+
+    //         // Function to populate the table
+    //         function populateTable() {
+    //             tableBody.innerHTML = ''; // Clear the table
+    //             const paginatedData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    //             paginatedData.forEach(item => {
+    //                 const row = document.createElement('tr');
+    //                 row.innerHTML = `
+    //                     <td>${item.id}</td>
+    //                     <td>${item.title}</td>
+    //                     <td>${item.description}</td>
+    //                     <td>${item.price}</td>
+    //                     <td>${item.category}</td>
+    //                     <td>${item.sold ? 'Yes' : 'No'}</td>
+    //                     <td><img src="${item.image}" alt="${item.title}" width="50"></td>
+    //                 `;
+    //                 tableBody.appendChild(row);
+    //             });
+
+    //             updatePaginationControls();
+    //         }
+
+    //         // Function to update pagination controls
+    //         function updatePaginationControls() {
+    //             currentPageDisplay.textContent = currentPage;
+    //             prevPageBtn.disabled = currentPage === 1;
+    //             nextPageBtn.disabled = currentPage * itemsPerPage >= filteredData.length;
+    //         }
+
+    //         // Pagination event listeners
+    //         prevPageBtn.addEventListener('click', () => {
+    //             if (currentPage > 1) {
+    //                 currentPage--;
+    //                 populateTable();
+    //             }
+    //         });
+
+    //         nextPageBtn.addEventListener('click', () => {
+    //             if (currentPage * itemsPerPage < filteredData.length) {
+    //                 currentPage++;
+    //                 populateTable();
+    //             }
+    //         });
+
+    //         // Function to populate month filter options
+    //         function populateMonthFilter(data) {
+    //             const months = new Set();
+    //             data.forEach(item => {
+    //                 const date = new Date(item.dateOfSale);
+    //                 const monthYear = `${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+    //                 months.add(monthYear);
+    //             });
+
+    //             Array.from(months).sort().forEach(month => {
+    //                 const option = document.createElement('option');
+    //                 option.value = month;
+    //                 option.textContent = month;
+    //                 monthFilter.appendChild(option);
+    //             });
+    //         }
+
+    //         // Function to filter by month when button is clicked
+    //         function filterByMonth() {
+    //             const selectedMonth = monthFilter.value;
+
+    //             filteredData = data.filter(item => {
+    //                 const date = new Date(item.dateOfSale);
+    //                 const itemMonthYear = `${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+    //                 return selectedMonth ? itemMonthYear === selectedMonth : true;
+    //             });
+
+    //             currentPage = 1; // Reset to first page
+    //             populateTable();
+    //         }
+
+    //         // Event listener for the search button
+    //         searchBtn.addEventListener('click', filterByMonth);
+    //     });
+    // </script>
+
+</body>
+
+</html>
